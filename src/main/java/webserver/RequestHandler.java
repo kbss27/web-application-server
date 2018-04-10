@@ -3,9 +3,12 @@ package webserver;
 import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
+import java.util.Map;
 
+import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.HttpRequestUtils;
 
 public class RequestHandler extends Thread {
     private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
@@ -25,24 +28,28 @@ public class RequestHandler extends Thread {
             DataOutputStream dos = new DataOutputStream(out);
 
             //요구사항 1 - index.html로 응답하기
-            BufferedReader br = new BufferedReader(new InputStreamReader(in));
-            String line;
-            String getURL = "";
-            StringBuilder stringBuilder = new StringBuilder();
+            BufferedReader br = new BufferedReader(new InputStreamReader(in, "UTF-8"));
 
-            while((line = br.readLine()) != null) {
-                if("".equals(line)) {
-                    break;
-                }
+            String line = br.readLine();
+            String getURL = HttpRequestUtils.getURL(line);
 
-                String[] tmpLine = line.split(" ");
-                if(tmpLine[0].equals(null)) {
-                    getURL = tmpLine[1];
-                }
-
-                stringBuilder.append(line+"\n");
+            //요구사항 32 - POST방식으로 회원가입하기
+            if(getURL.startsWith("/user/create")) {
+                int idx = getURL.indexOf("?");
+                String requestPath = getURL.substring(0, idx);
+                String parsingStr = getURL.substring(idx+1);
+                Map<String, String> userInfo = HttpRequestUtils.parseQueryString(parsingStr);
+                User user = new User(userInfo);
             }
 
+            log.debug("header : {}", line);
+
+            /*while("".equals(line)) {
+                if(line == null) {
+                    return;
+                }
+                line = br.readLine();
+            }*/
 
             byte[] body = Files.readAllBytes(new File("./webapp"+getURL).toPath());
 
