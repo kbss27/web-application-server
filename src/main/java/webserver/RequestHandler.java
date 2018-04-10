@@ -78,6 +78,10 @@ public class RequestHandler extends Thread {
         }
     }
 
+    private void response302Header(DataOutputStream dos, int lengthOfBodyContent) {
+        dos.writeBytes("HTTP/1.1 302 OK")
+    }
+
     private void responseBody(DataOutputStream dos, byte[] body) {
         try {
             dos.write(body, 0, body.length);
