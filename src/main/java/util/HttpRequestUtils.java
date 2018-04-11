@@ -9,6 +9,11 @@ import com.google.common.collect.Maps;
 
 public class HttpRequestUtils {
 
+    public static String getMethod(String header) {
+        String[] splitHeader = header.split(" ");
+        return splitHeader[0];
+    }
+
     public static String getURL(String header) {
         String[] splitHeader = header.split(" ");
         return splitHeader[1];
