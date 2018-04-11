@@ -37,8 +37,11 @@ public class RequestHandler extends Thread {
             Map<String, String> headerMap = new HashMap<>();
 
             String line = br.readLine();
+            String method = HttpRequestUtils.getMethod(line);
             String getURL = HttpRequestUtils.getURL(line);
 
+
+            //request header를 읽으면서 ~: ~ 형식을 key value로 mapping 시킨다
             while (!"".equals(line)) {
                 if (line == null) {
                     return;
@@ -51,18 +54,28 @@ public class RequestHandler extends Thread {
                 line = br.readLine();
             }
 
-            if (getURL.startsWith("/user/create")) {
-                String body = IOUtils.readData(br, Integer.parseInt(headerMap.get("Content-Length")));
-                Map<String, String> userInfo = HttpRequestUtils.parseQueryString(body);
-                user = new User(userInfo);
-                log.debug("User Info : {}", user);
+            //GET인지 POST인지부터 구별해야한다.
+            //Request마다 thread를 생성해서 해당 request를 처리하는 stateless상태 때문에 user 객체를 가지고 있는다는 생각은 잘못된것!
+            if ("GET".equals(method)) {
 
-                //회원가입을 완료할 경우 index.html로 redirect한다.
-                response302Header(dos);
-            } else if (getURL.startsWith("/user/login.html")) {
-                
+            } else if ("POST".equals(method)) {
+                if (getURL.startsWith("/user/create")) {
+                    String body = IOUtils.readData(br, Integer.parseInt(headerMap.get("Content-Length")));
+                    Map<String, String> userInfo = HttpRequestUtils.parseQueryString(body);
+                    user = new User(userInfo);
+                    log.debug("User Info : {}", user);
+
+                    //회원가입을 완료할 경우 index.html로 redirect한다.
+                    response302Header(dos);
+                } else if (getURL.startsWith("/user/login")) {
+                    String body = IOUtils.readData(br, Integer.parseInt(headerMap.get("Content-Length")));
+                    Map<String, String> userInfo = HttpRequestUtils.parseQueryString(body);
+                    User otherUser = new User(userInfo);
+                    if(user.equals(otherUser)) {
+                        log.debug("Is this User : success");
+                    }
+                }
             }
-
 
             byte[] body = Files.readAllBytes(new File("./webapp"+getURL).toPath());
 
