@@ -16,6 +16,7 @@ public class RequestHandler extends Thread {
     private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
 
     private Socket connection;
+    private User user;
 
     public RequestHandler(Socket connectionSocket) {
         this.connection = connectionSocket;
@@ -38,23 +39,28 @@ public class RequestHandler extends Thread {
             String line = br.readLine();
             String getURL = HttpRequestUtils.getURL(line);
 
-            while(!"".equals(line)) {
-                if(line == null) {
+            while (!"".equals(line)) {
+                if (line == null) {
                     return;
                 }
                 String[] header = line.split(" ");
                 int idx = header[0].indexOf(":");
-                if(idx > 0) {
+                if (idx > 0) {
                     headerMap.put(header[0].substring(0, idx), header[1]);
                 }
                 line = br.readLine();
             }
 
-            if(getURL.startsWith("/user/create")) {
+            if (getURL.startsWith("/user/create")) {
                 String body = IOUtils.readData(br, Integer.parseInt(headerMap.get("Content-Length")));
                 Map<String, String> userInfo = HttpRequestUtils.parseQueryString(body);
-                User user = new User(userInfo);
+                user = new User(userInfo);
                 log.debug("User Info : {}", user);
+
+                //회원가입을 완료할 경우 index.html로 redirect한다.
+                response302Header(dos);
+            } else if (getURL.startsWith("/user/login.html")) {
+                
             }
 
 
@@ -78,8 +84,14 @@ public class RequestHandler extends Thread {
         }
     }
 
-    private void response302Header(DataOutputStream dos, int lengthOfBodyContent) {
-        dos.writeBytes("HTTP/1.1 302 OK")
+    private void response302Header(DataOutputStream dos) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 FOUND\r\n");
+            dos.writeBytes("Location: http://localhost:8080/index.html");
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+
     }
 
     private void responseBody(DataOutputStream dos, byte[] body) {
