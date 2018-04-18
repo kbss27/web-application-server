@@ -3,8 +3,7 @@ package webserver;
 import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import com.sun.deploy.util.StringUtils;
 import db.DataBase;
@@ -19,7 +18,6 @@ public class RequestHandler extends Thread {
 
     private Socket connection;
     private User user;
-    private DataBase db;
 
     public RequestHandler(Socket connectionSocket) {
         this.connection = connectionSocket;
@@ -60,7 +58,32 @@ public class RequestHandler extends Thread {
             //GET인지 POST인지부터 구별해야한다.
             //Request마다 thread를 생성해서 해당 request를 처리하는 stateless상태 때문에 user 객체를 가지고 있겠다라는 생각은 잘못된것!
             if ("GET".equals(method)) {
+                if(getURL.startsWith("/user/list")) {
+                    Map<String, String> getCookies = HttpRequestUtils.parseCookies(headerMap.get("Cookie"));
+                    //logined되어있는 계정인지 쿠키 확인
+                    if(Boolean.parseBoolean(getCookies.get("logined"))) {
+                        Collection<User> users = DataBase.findAll();
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("<table border='1'>");
+                        for(User user : users) {
+                            sb.append("<tr>");
+                            sb.append(" <th>#</th> <th>사용자 아이디</th> <th>이름</th> <th>이메일</th><th></th>");
+                            sb.append("</tr>");
+                            sb.append("<tr>");
+                            sb.append("<th>1</th> <td>"+user.getUserId()+"</td> <td>"+user.getName()+"</td> <td>"+user.getEmail()+"</td>");
+                            sb.append("</tr>");
+                        }
+                        sb.append("</table>");
 
+                        byte[] body = sb.toString().getBytes();
+                        response200Header(dos, body.length, null);
+                        responseBody(dos, body);
+                    } else {
+                        byte[] body = Files.readAllBytes(new File("./webapp"+"/user/login.html").toPath());
+                        response200Header(dos, body.length, null);
+                        responseBody(dos, body);
+                    }
+                }
                 byte[] body = Files.readAllBytes(new File("./webapp"+getURL).toPath());
                 response200Header(dos, body.length, null);
                 responseBody(dos, body);
@@ -71,13 +94,13 @@ public class RequestHandler extends Thread {
                     Map<String, String> userInfo = HttpRequestUtils.parseQueryString(body);
                     user = new User(userInfo);
                     log.debug("User Info : {}", user);
-                    db.addUser(user);
+                    DataBase.addUser(user);
                     response302Header(dos, "index.html");
                 } else if (getURL.startsWith("/user/login")) {
                     String body = IOUtils.readData(br, Integer.parseInt(headerMap.get("Content-Length")));
                     Map<String, String> userInfo = HttpRequestUtils.parseQueryString(body);
                     User otherUser = new User(userInfo);
-                    User getUser = db.findUserById(otherUser.getUserId());
+                    User getUser = DataBase.findUserById(otherUser.getUserId());
                     if(getUser != null) {
                         if(getUser.equals(otherUser)) {
                             //로그인 성공시 응답 헤더에 cookie를 추가해 로그인 성공 여부 전달
