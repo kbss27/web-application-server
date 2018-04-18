@@ -6,6 +6,8 @@ import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.sun.deploy.util.StringUtils;
+import db.DataBase;
 import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +19,7 @@ public class RequestHandler extends Thread {
 
     private Socket connection;
     private User user;
+    private DataBase db;
 
     public RequestHandler(Socket connectionSocket) {
         this.connection = connectionSocket;
@@ -55,8 +58,12 @@ public class RequestHandler extends Thread {
             }
 
             //GET인지 POST인지부터 구별해야한다.
-            //Request마다 thread를 생성해서 해당 request를 처리하는 stateless상태 때문에 user 객체를 가지고 있는다는 생각은 잘못된것!
+            //Request마다 thread를 생성해서 해당 request를 처리하는 stateless상태 때문에 user 객체를 가지고 있겠다라는 생각은 잘못된것!
             if ("GET".equals(method)) {
+
+                byte[] body = Files.readAllBytes(new File("./webapp"+getURL).toPath());
+                response200Header(dos, body.length, null);
+                responseBody(dos, body);
 
             } else if ("POST".equals(method)) {
                 if (getURL.startsWith("/user/create")) {
@@ -64,43 +71,54 @@ public class RequestHandler extends Thread {
                     Map<String, String> userInfo = HttpRequestUtils.parseQueryString(body);
                     user = new User(userInfo);
                     log.debug("User Info : {}", user);
-
-                    //회원가입을 완료할 경우 index.html로 redirect한다.
-                    response302Header(dos);
+                    db.addUser(user);
+                    response302Header(dos, "index.html");
                 } else if (getURL.startsWith("/user/login")) {
                     String body = IOUtils.readData(br, Integer.parseInt(headerMap.get("Content-Length")));
                     Map<String, String> userInfo = HttpRequestUtils.parseQueryString(body);
                     User otherUser = new User(userInfo);
-                    if(user.equals(otherUser)) {
-                        log.debug("Is this User : success");
+                    User getUser = db.findUserById(otherUser.getUserId());
+                    if(getUser != null) {
+                        if(getUser.equals(otherUser)) {
+                            //로그인 성공시 응답 헤더에 cookie를 추가해 로그인 성공 여부 전달
+                            byte[] responseBody = Files.readAllBytes(new File("./webapp"+"/index.html").toPath());
+                            response200Header(dos, responseBody.length, "true");
+                            responseBody(dos, responseBody);
+                        } else {
+                            //로그인 실패시 cookie false로 설정
+                            byte[] responseBody = Files.readAllBytes(new File("./webapp"+"/user/login_failed.html").toPath());
+                            response200Header(dos, responseBody.length, "false");
+                            responseBody(dos, responseBody);
+                        }
+                    } else {
+                        response302Header(dos, "user/login_failed.html");
                     }
                 }
             }
 
-            byte[] body = Files.readAllBytes(new File("./webapp"+getURL).toPath());
-
-            response200Header(dos, body.length);
-            responseBody(dos, body);
         } catch (IOException e) {
             log.error(e.getMessage());
         }
     }
 
-    private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
+    private void response200Header(DataOutputStream dos, int lengthOfBodyContent, String logined) {
         try {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            if(logined != null) {
+                dos.writeBytes("Set-Cookie: logined="+logined+"\r\n");
+            }
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
         }
     }
 
-    private void response302Header(DataOutputStream dos) {
+    private void response302Header(DataOutputStream dos, String redirectUrl) {
         try {
             dos.writeBytes("HTTP/1.1 302 FOUND\r\n");
-            dos.writeBytes("Location: http://localhost:8080/index.html");
+            dos.writeBytes("Location: http://localhost:8080/"+redirectUrl);
         } catch (IOException e) {
             log.error(e.getMessage());
         }
