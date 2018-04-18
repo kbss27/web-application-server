@@ -83,6 +83,10 @@ public class RequestHandler extends Thread {
                         response200Header(dos, body.length, null);
                         responseBody(dos, body);
                     }
+                }else if(getURL.startsWith("/css/style")) {
+                    byte[] body = Files.readAllBytes(new File("./webapp"+"/css/styles.css").toPath());
+                    response200HeaderWithCSS(dos, body.length);
+                    responseBody(dos, body);
                 }
                 byte[] body = Files.readAllBytes(new File("./webapp"+getURL).toPath());
                 response200Header(dos, body.length, null);
@@ -119,6 +123,16 @@ public class RequestHandler extends Thread {
                 }
             }
 
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+    private void response200HeaderWithCSS(DataOutputStream dos, int lengthOfBodyContent) {
+        try {
+            dos.writeBytes("HTTP/1.1 200 OK \r\n");
+            dos.writeBytes("Content-Type: text/css\r\n");
+            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
         }
