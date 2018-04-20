@@ -9,15 +9,12 @@ import com.google.common.collect.Maps;
 
 public class HttpRequestUtils {
 
-    public static String getMethod(String header) {
+    //request의 첫번째 라인을 parsing
+    public static String[] getFirstReqLine(String header) {
         String[] splitHeader = header.split(" ");
-        return splitHeader[0];
+        return splitHeader;
     }
 
-    public static String getURL(String header) {
-        String[] splitHeader = header.split(" ");
-        return splitHeader[1];
-    }
     /**
      * @param queryString은
      *            URL에서 ? 이후에 전달되는 field1=value1&field2=value2 형식임

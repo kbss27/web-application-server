@@ -29,30 +29,22 @@ public class RequestHandler extends Thread {
 
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
             // TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
+//            byte[] body;
+
             DataOutputStream dos = new DataOutputStream(out);
 
-            //요구사항 1 - index.html로 응답하기
             BufferedReader br = new BufferedReader(new InputStreamReader(in, "UTF-8"));
 
-            //요구사항 32 - POST방식으로 회원가입하기
-            Map<String, String> headerMap = new HashMap<>();
-
             String line = br.readLine();
-            String method = HttpRequestUtils.getMethod(line);
-            String getURL = HttpRequestUtils.getURL(line);
+            String[] firstReqLine = HttpRequestUtils.getFirstReqLine(line);
+            String method = firstReqLine[0];
+            String getURL = firstReqLine[1];
 
 
             //request header를 읽으면서 ~: ~ 형식을 key value로 mapping 시킨다
-            while (!"".equals(line)) {
-                if (line == null) {
-                    return;
-                }
-                String[] header = line.split(" ");
-                int idx = header[0].indexOf(":");
-                if (idx > 0) {
-                    headerMap.put(header[0].substring(0, idx), header[1]);
-                }
-                line = br.readLine();
+            Map<String, String> headerMap = getHeaderMap(br, line);
+            if (headerMap == null) {
+                return;
             }
 
             //GET인지 POST인지부터 구별해야한다.
@@ -76,22 +68,18 @@ public class RequestHandler extends Thread {
                         sb.append("</table>");
 
                         byte[] body = sb.toString().getBytes();
-                        response200Header(dos, body.length, null);
+                        response200Header(dos, body.length);
                         responseBody(dos, body);
                     } else {
-                        byte[] body = Files.readAllBytes(new File("./webapp"+"/user/login.html").toPath());
-                        response200Header(dos, body.length, null);
-                        responseBody(dos, body);
+                        responseTerminal(dos, "/user/login.html");
+                        return;
                     }
-                }else if(getURL.startsWith("/css/style")) {
+                } else if(getURL.startsWith("/css/style")) {
                     byte[] body = Files.readAllBytes(new File("./webapp"+"/css/styles.css").toPath());
                     response200HeaderWithCSS(dos, body.length);
                     responseBody(dos, body);
                 }
-                byte[] body = Files.readAllBytes(new File("./webapp"+getURL).toPath());
-                response200Header(dos, body.length, null);
-                responseBody(dos, body);
-
+                responseTerminal(dos, getURL);
             } else if ("POST".equals(method)) {
                 if (getURL.startsWith("/user/create")) {
                     String body = IOUtils.readData(br, Integer.parseInt(headerMap.get("Content-Length")));
@@ -109,12 +97,12 @@ public class RequestHandler extends Thread {
                         if(getUser.equals(otherUser)) {
                             //로그인 성공시 응답 헤더에 cookie를 추가해 로그인 성공 여부 전달
                             byte[] responseBody = Files.readAllBytes(new File("./webapp"+"/index.html").toPath());
-                            response200Header(dos, responseBody.length, "true");
+                            response200HeaderWithCookie(dos, responseBody.length, "true");
                             responseBody(dos, responseBody);
                         } else {
                             //로그인 실패시 cookie false로 설정
                             byte[] responseBody = Files.readAllBytes(new File("./webapp"+"/user/login_failed.html").toPath());
-                            response200Header(dos, responseBody.length, "false");
+                            response200HeaderWithCookie(dos, responseBody.length, "false");
                             responseBody(dos, responseBody);
                         }
                     } else {
@@ -127,6 +115,7 @@ public class RequestHandler extends Thread {
             log.error(e.getMessage());
         }
     }
+
     private void response200HeaderWithCSS(DataOutputStream dos, int lengthOfBodyContent) {
         try {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
@@ -138,14 +127,23 @@ public class RequestHandler extends Thread {
         }
     }
 
-    private void response200Header(DataOutputStream dos, int lengthOfBodyContent, String logined) {
+    private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
         try {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
-            if(logined != null) {
-                dos.writeBytes("Set-Cookie: logined="+logined+"\r\n");
-            }
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void response200HeaderWithCookie(DataOutputStream dos, int lengthOfBodyContent, String logined) {
+        try {
+            dos.writeBytes("HTTP/1.1 200 OK \r\n");
+            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes("Set-Cookie: logined="+logined+"\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
@@ -169,5 +167,29 @@ public class RequestHandler extends Thread {
         } catch (IOException e) {
             log.error(e.getMessage());
         }
+    }
+
+    //////////////////////////////////////////////////////////////////
+    //private Method
+    private Map<String, String> getHeaderMap(BufferedReader br, String line) throws IOException {
+        Map<String, String> headerMap = new HashMap<>();
+        while (!"".equals(line)) {
+            if (line == null) {
+                return null;
+            }
+            String[] header = line.split(" ");
+            int idx = header[0].indexOf(":");
+            if (idx > 0) {
+                headerMap.put(header[0].substring(0, idx), header[1]);
+            }
+            line = br.readLine();
+        }
+        return headerMap;
+    }
+
+    private void responseTerminal(DataOutputStream dos, String urlPath) throws IOException {
+        byte[] responseBody = Files.readAllBytes(new File("./webapp"+urlPath).toPath());
+        response200Header(dos, responseBody.length);
+        responseBody(dos, responseBody);
     }
 }
