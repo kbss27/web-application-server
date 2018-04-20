@@ -75,7 +75,7 @@ public class RequestHandler extends Thread {
                         return;
                     }
                 } else if(getURL.startsWith("/css/style")) {
-                    byte[] body = Files.readAllBytes(new File("./webapp"+"/css/styles.css").toPath());
+                    byte[] body = Files.readAllBytes(new File("./webapp"+getURL).toPath());
                     response200HeaderWithCSS(dos, body.length);
                     responseBody(dos, body);
                 }
@@ -136,7 +136,7 @@ public class RequestHandler extends Thread {
         } catch (IOException e) {
             log.error(e.getMessage());
         }
-    }
+    }ß
 
     private void response200HeaderWithCookie(DataOutputStream dos, int lengthOfBodyContent, String logined) {
         try {
