@@ -1,0 +1,9 @@
+POST /user/create
+Host: localhost:8080
+Connection: keep-alive
+Content-Length: 46
+Content-Type: application/x-www-form-urlencoded
+Accept: */*
+
+userId=kbss27&password=12345&name=hyunwoo HTTP/1.1
+
