@@ -32,25 +32,15 @@ public class RequestHandler extends Thread {
 
             DataOutputStream dos = new DataOutputStream(out);
 
-            BufferedReader br = new BufferedReader(new InputStreamReader(in, "UTF-8"));
-
-            String line = br.readLine();
-            String[] firstReqLine = HttpRequestUtils.getFirstReqLine(line);
-            String method = firstReqLine[0];
-            String getURL = firstReqLine[1];
-
-
-            //request header를 읽으면서 ~: ~ 형식을 key value로 mapping 시킨다
-            Map<String, String> headerMap = getHeaderMap(br, line);
-            if (headerMap == null) {
-                return;
-            }
+            HttpRequest httpRequest = new HttpRequest(in);
+            HttpResponse httpResponse = new HttpResponse(out);
 
             //GET인지 POST인지부터 구별해야한다.
             //Request마다 thread를 생성해서 해당 request를 처리하는 stateless상태 때문에 user 객체를 가지고 있겠다라는 생각은 잘못된것!
-            if ("GET".equals(method)) {
-                if(getURL.startsWith("/user/list")) {
-                    Map<String, String> getCookies = HttpRequestUtils.parseCookies(headerMap.get("Cookie"));
+            if ("GET".equals(httpRequest.getMethod())) {
+                if(httpRequest.getPath().startsWith("/user/list")) {
+                    Map<String, String> getCookies = HttpRequestUtils.parseCookies(httpRequest.getHeader("Cookie"));
+
                     //logined되어있는 계정인지 쿠키 확인
                     if(Boolean.parseBoolean(getCookies.get("logined"))) {
                         Collection<User> users = DataBase.findAll();
@@ -73,24 +63,22 @@ public class RequestHandler extends Thread {
                         responseTerminal(dos, "/user/login.html");
                         return;
                     }
-                } else if(getURL.startsWith("/css/style")) {
-                    byte[] body = Files.readAllBytes(new File("./webapp"+getURL).toPath());
+                } else if(httpRequest.getPath().startsWith("/css/style")) {
+                    /*byte[] body = Files.readAllBytes(new File("./webapp"+httpRequest.getPath()).toPath());
                     response200HeaderWithCSS(dos, body.length);
-                    responseBody(dos, body);
+                    responseBody(dos, body);*/
                 }
-                responseTerminal(dos, getURL);
-            } else if ("POST".equals(method)) {
-                if (getURL.startsWith("/user/create")) {
-                    String body = IOUtils.readData(br, Integer.parseInt(headerMap.get("Content-Length")));
-                    Map<String, String> userInfo = HttpRequestUtils.parseQueryString(body);
-                    user = new User(userInfo);
+                responseTerminal(dos, httpRequest.getPath());
+            } else if ("POST".equals(httpRequest.getMethod())) {
+                if (httpRequest.getPath().startsWith("/user/create")) {
+                    user = new User(httpRequest.getParameter("userId"), httpRequest.getParameter("password"),
+                            httpRequest.getParameter("name"), httpRequest.getParameter("email"));
                     log.debug("User Info : {}", user);
                     DataBase.addUser(user);
                     response302Header(dos, "index.html");
-                } else if (getURL.startsWith("/user/login")) {
-                    String body = IOUtils.readData(br, Integer.parseInt(headerMap.get("Content-Length")));
-                    Map<String, String> userInfo = HttpRequestUtils.parseQueryString(body);
-                    User otherUser = new User(userInfo);
+                } else if (httpRequest.getPath().startsWith("/user/login")) {
+                    User otherUser = new User(httpRequest.getParameter("userId"), httpRequest.getParameter("password"),
+                            httpRequest.getParameter("name"), httpRequest.getParameter("email"));
                     User getUser = DataBase.findUserById(otherUser.getUserId());
                     if(getUser != null) {
                         if(getUser.equals(otherUser)) {
@@ -170,21 +158,6 @@ public class RequestHandler extends Thread {
 
     //////////////////////////////////////////////////////////////////
     //private Method
-    private Map<String, String> getHeaderMap(BufferedReader br, String line) throws IOException {
-        Map<String, String> headerMap = new HashMap<>();
-        while (!"".equals(line)) {
-            if (line == null) {
-                return null;
-            }
-            String[] header = line.split(" ");
-            int idx = header[0].indexOf(":");
-            if (idx > 0) {
-                headerMap.put(header[0].substring(0, idx), header[1]);
-            }
-            line = br.readLine();
-        }
-        return headerMap;
-    }
 
     private void responseTerminal(DataOutputStream dos, String urlPath) throws IOException {
         byte[] responseBody = Files.readAllBytes(new File("./webapp"+urlPath).toPath());
