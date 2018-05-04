@@ -54,9 +54,13 @@ public class HttpRequest {
 
         if("GET".equals(method)) {
             int idx = path.indexOf('?');
+            if(idx < 0) {
+                return;
+            }
             String queryString = path.substring(idx+1);
             path = path.substring(0, idx);
             parameterInfo = HttpRequestUtils.parseQueryString(queryString);
+
 
         } else {
             String body = IOUtils.readData(br, Integer.parseInt(headerMap.get("Content-Length")));
