@@ -33,8 +33,6 @@ public class RequestHandler extends Thread {
             // TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
             controllerMap = new HashMap<>();
 
-            DataOutputStream dos = new DataOutputStream(out);
-
             HttpRequest httpRequest = new HttpRequest(in);
             HttpResponse httpResponse = new HttpResponse(out);
 
@@ -69,9 +67,29 @@ public class RequestHandler extends Thread {
                 httpResponse.forward(httpRequest.getPath());
             } else if ("POST".equals(httpRequest.getMethod())) {
                 if (httpRequest.getPath().startsWith("/user/create")) {
+                    User user = new User(httpRequest.getParameter("userId"), httpRequest.getParameter("password"),
+                            httpRequest.getParameter("name"), httpRequest.getParameter("email"));
+                    DataBase.addUser(user);
+                    httpResponse.sendRedirect("/index.html");
 
                 } else if (httpRequest.getPath().startsWith("/user/login")) {
+                    User otherUser = new User(httpRequest.getParameter("userId"), httpRequest.getParameter("password"),
+                            httpRequest.getParameter("name"), httpRequest.getParameter("email"));
+                    User getUser = DataBase.findUserById(otherUser.getUserId());
+                    if(getUser != null) {
+                        if(getUser.equals(otherUser)) {
+                            //로그인 성공시 응답 헤더에 cookie를 추가해 로그인 성공 여부 전달
+                            httpResponse.addHeader("Set-Cookie", "logined=true");
+                            httpResponse.sendRedirect("/index.html");
 
+                        } else {
+                            //로그인 실패시 cookie false로 설정
+                            httpResponse.addHeader("Set-Cookie", "logined=false");
+                            httpResponse.sendRedirect("/index.html");
+                        }
+                    } else {
+                        httpResponse.sendRedirect("/user/login_failed.html");
+                    }
                 }
             }
 
