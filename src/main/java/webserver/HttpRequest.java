@@ -23,7 +23,7 @@ public class HttpRequest {
         parseRequestData();
     }
 
-    public String getMethod() throws IOException {
+    public String getMethod() {
 
         return method;
     }

@@ -9,10 +9,10 @@ import webserver.HttpResponse;
 import java.util.Collection;
 import java.util.Map;
 
-public class ListUserController implements Controller {
+public class ListUserControllerImpl extends ControllerImpl {
 
     @Override
-    public void service(HttpRequest request, HttpResponse response) {
+    public void doGet(HttpRequest request, HttpResponse response) {
         Map<String, String> getCookies = HttpRequestUtils.parseCookies(request.getHeader("Cookie"));
 
         //logined되어있는 계정인지 쿠키 확인
@@ -33,8 +33,6 @@ public class ListUserController implements Controller {
             response.forwardBody(sb.toString());
         } else {
             response.forward("/user/login.html");
-            return;
         }
     }
-
 }

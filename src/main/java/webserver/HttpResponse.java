@@ -18,21 +18,25 @@ public class HttpResponse {
         this.out = out;
     }
 
-    public void forward(String path) throws IOException {
-        byte[] responseBody = Files.readAllBytes(new File("./webapp"+path).toPath());
-        DataOutputStream dos = new DataOutputStream(out);
+    public void forward(String path) {
+        try {
+            byte[] responseBody = Files.readAllBytes(new File("./webapp"+path).toPath());
+            DataOutputStream dos = new DataOutputStream(out);
 
-        //static file 분리 (css, js, html)
-        if(path.endsWith(".css")) {
-            responseHeader.put("Content-Type", "text/css");
-        } else if(path.endsWith(".js")) {
-            responseHeader.put("Content-Type", "text/javascript");
-        } else {
-            responseHeader.put("Content-Type", "text/html;charset=utf-8");
+            //static file 분리 (css, js, html)
+            if(path.endsWith(".css")) {
+                responseHeader.put("Content-Type", "text/css");
+            } else if(path.endsWith(".js")) {
+                responseHeader.put("Content-Type", "text/javascript");
+            } else {
+                responseHeader.put("Content-Type", "text/html;charset=utf-8");
+            }
+            responseHeader.put("Content-Length", String.valueOf(responseBody.length));
+            response200Header(dos);
+            responseBody(dos, responseBody);
+        } catch (IOException e) {
+            log.error(e.getMessage());
         }
-        responseHeader.put("Content-Length", String.valueOf(responseBody.length));
-        response200Header(dos);
-        responseBody(dos, responseBody);
     }
 
     public void forwardBody(String body) {

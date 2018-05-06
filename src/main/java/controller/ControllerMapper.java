@@ -7,9 +7,9 @@ public class ControllerMapper {
     private static Map<String, Controller> controllerMap = new HashMap<>();
 
     static {
-        controllerMap.put("/user/list", new ListUserController());
-        controllerMap.put("/user/create", new CreateUserController());
-        controllerMap.put("/user/login", new LoginController());
+        controllerMap.put("/user/list", new ListUserControllerImpl());
+        controllerMap.put("/user/create", new CreateUserControllerImpl());
+        controllerMap.put("/user/login", new LoginControllerImpl());
     }
 
     public static Controller getController(String url) {
