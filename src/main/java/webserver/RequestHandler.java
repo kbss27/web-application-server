@@ -4,7 +4,7 @@ import java.io.*;
 import java.net.Socket;
 
 import controller.Controller;
-import controller.ControllerMapper;
+import controller.mapper.ControllerMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +30,7 @@ public class RequestHandler extends Thread {
             Controller controller = ControllerMapper.getController(httpRequest.getPath());
 
             if(controller == null) {
-                httpResponse.forward(httpRequest.getPath());
+                httpResponse.forward(getDefaultPath(httpRequest.getPath()));
                 return;
             }
 
@@ -41,4 +41,10 @@ public class RequestHandler extends Thread {
         }
     }
 
+    private String getDefaultPath(String path) {
+        if("/".equals(path)) {
+            return "/index.html";
+        }
+        return path;
+    }
 }

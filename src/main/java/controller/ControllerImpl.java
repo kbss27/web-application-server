@@ -1,5 +1,6 @@
 package controller;
 
+import enums.HttpMethod;
 import webserver.HttpRequest;
 import webserver.HttpResponse;
 
@@ -7,10 +8,10 @@ public class ControllerImpl implements Controller {
 
     @Override
     public void service(HttpRequest request, HttpResponse response) {
-        String method = request.getMethod();
-        if ("GET".equals(method)) {
+        HttpMethod method = request.getMethod();
+        if (method.isGet()) {
             doGet(request, response);
-        } else if ("POST".equals(method)) {
+        } else if (method.isPost()) {
             doPost(request, response);
         }
     }

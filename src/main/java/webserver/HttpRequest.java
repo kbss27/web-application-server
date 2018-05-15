@@ -1,5 +1,6 @@
 package webserver;
 
+import enums.HttpMethod;
 import util.HttpRequestUtils;
 import util.IOUtils;
 
@@ -12,8 +13,8 @@ import java.util.Map;
 
 public class HttpRequest {
 
+    private HttpMethod method;
     private InputStream in;
-    private String method;
     private String path;
     private Map<String, String> headerMap;
     private Map<String, String> parameterInfo;
@@ -23,8 +24,7 @@ public class HttpRequest {
         parseRequestData();
     }
 
-    public String getMethod() {
-
+    public HttpMethod getMethod() {
         return method;
     }
 
@@ -45,14 +45,14 @@ public class HttpRequest {
         BufferedReader br = new BufferedReader(new InputStreamReader(in, "UTF-8"));
         String line = br.readLine();
         String[] firstReqLine = HttpRequestUtils.getFirstReqLine(line);
-        this.method = firstReqLine[0];
+        this.method = method.valueOf(firstReqLine[0]);
         this.path = firstReqLine[1];
         this.headerMap = getHeaderMap(br, line);
         if (this.headerMap == null) {
             return;
         }
 
-        if("GET".equals(method)) {
+        if(method.isGet()) {
             int idx = path.indexOf('?');
             if(idx < 0) {
                 return;
@@ -60,8 +60,6 @@ public class HttpRequest {
             String queryString = path.substring(idx+1);
             path = path.substring(0, idx);
             parameterInfo = HttpRequestUtils.parseQueryString(queryString);
-
-
         } else {
             String body = IOUtils.readData(br, Integer.parseInt(headerMap.get("Content-Length")));
             path = firstReqLine[1];

@@ -1,5 +1,6 @@
-package controller;
+package controller.Implement;
 
+import controller.ControllerImpl;
 import db.DataBase;
 import model.User;
 import webserver.HttpRequest;
@@ -20,14 +21,17 @@ public class LoginControllerImpl extends ControllerImpl {
                 response.sendRedirect("/index.html");
 
             } else {
-                //로그인 실패시 cookie false로 설정
-                response.addHeader("Set-Cookie", "logined=false");
-                response.sendRedirect("/index.html");
+                loginFailed(response);
             }
         } else {
-            response.addHeader("Set-Cookie", "logined=false");
-            response.sendRedirect("/user/login_failed.html");
+            loginFailed(response);
         }
     }
+
+    private void loginFailed(HttpResponse response) {
+        response.addHeader("Set-Cookie", "logined=false");
+        response.sendRedirect("/user/login_failed.html");
+    }
+
 
 }
